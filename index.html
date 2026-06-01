@@ -269,14 +269,15 @@
     <h2 id="dsTitle">📅 날짜별 기록</h2>
     <p id="dsSub" style="color:var(--muted);font-size:.88rem;margin-bottom:14px"></p>
     <div id="dsGrid"></div>
-    <button class="ghost" id="dsClose">닫기</button>
+    <p style="text-align:center;font-size:.8rem;color:var(--muted);margin:6px 0">−/＋를 누르면 그때그때 저장돼요</p>
+    <button class="primary" id="dsClose">완료</button>
   </div>
 </div>
 
 <!-- 저장 안내 토스트 -->
 <div id="toast" style="position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);
   background:var(--p3);color:#fff;font-family:'Jua',sans-serif;font-size:1rem;padding:13px 24px;
-  border-radius:30px;box-shadow:0 6px 20px rgba(6,194,112,.4);z-index:99;opacity:0;pointer-events:none;
+  border-radius:30px;box-shadow:0 6px 20px rgba(6,194,112,.4);z-index:9999;opacity:0;pointer-events:none;
   transition:opacity .25s,transform .25s">저장되었습니다 ✓</div>
 
 <style>
@@ -631,9 +632,9 @@ async function adjustDate(g,ds,delta){
   const nv=Math.max(0,cur+delta);
   if(p)await sb.from('progress').update({value:nv,done:nv>0}).eq('id',p.id);
   else await sb.from('progress').insert({goal_id:g.id,log_date:ds,value:nv,done:nv>0});
-  // PROGRESS 즉시 갱신 후 그리드만 다시 그림(시트 유지)
   await reloadProgress();
   renderDateGrid(GOALS.find(x=>x.id===g.id));
+  toast('저장되었습니다 ✓');
 }
 async function toggleDate(g,ds){
   const p=PROGRESS.find(x=>x.goal_id===g.id&&x.log_date===ds);
@@ -641,6 +642,7 @@ async function toggleDate(g,ds){
   else await sb.from('progress').insert({goal_id:g.id,log_date:ds,done:true,value:1});
   await reloadProgress();
   renderDateGrid(GOALS.find(x=>x.id===g.id));
+  toast('저장되었습니다 ✓');
 }
 async function reloadProgress(){
   const ids=GOALS.map(x=>x.id);
