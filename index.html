@@ -263,6 +263,41 @@
   </div>
 </div>
 
+<!-- 날짜별 기록 시트 -->
+<div class="sheet" id="dateSheet">
+  <div class="box">
+    <h2 id="dsTitle">📅 날짜별 기록</h2>
+    <p id="dsSub" style="color:var(--muted);font-size:.88rem;margin-bottom:14px"></p>
+    <div id="dsGrid"></div>
+    <button class="ghost" id="dsClose">닫기</button>
+  </div>
+</div>
+
+<!-- 저장 안내 토스트 -->
+<div id="toast" style="position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);
+  background:var(--p3);color:#fff;font-family:'Jua',sans-serif;font-size:1rem;padding:13px 24px;
+  border-radius:30px;box-shadow:0 6px 20px rgba(6,194,112,.4);z-index:99;opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s">저장되었습니다 ✓</div>
+
+<style>
+  .dgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:50vh;overflow-y:auto;margin-bottom:8px}
+  .dcell{background:var(--card);border:2px solid var(--line);border-radius:13px;padding:9px 4px;text-align:center}
+  .dcell.today{border-color:var(--p4);background:#eef4ff}
+  .dcell.future{opacity:.4}
+  .dcell .dd{font-size:.72rem;color:var(--muted)}
+  .dcell .dv{font-family:'Jua',sans-serif;font-size:1.25rem;color:var(--p4);min-height:26px}
+  .dcell .dv.zero{color:var(--line)}
+  .dcell.check .dv{font-size:1.1rem}
+  .dctrl{display:flex;gap:4px;margin-top:5px;justify-content:center}
+  .dctrl button{width:30px;height:30px;border:none;border-radius:8px;background:#f4eee2;
+    font-family:'Jua',sans-serif;font-size:1.1rem;color:var(--ink)}
+  .dctrl button:active{transform:scale(.92)}
+  .dcheck{margin-top:5px}
+  .dcheck button{width:100%;border:none;border-radius:9px;padding:6px;font-size:.85rem;
+    font-family:'Jua',sans-serif;background:#f4eee2;color:var(--ink)}
+  .dcheck button.on{background:var(--p3);color:#fff}
+</style>
+
 <script>
 const SB_URL="https://fucwiszvnxdntxfzupwf.supabase.co";
 const SB_KEY="sb_publishable_ng1aIdmRqA8zZ2PjQnyYmQ_Djiaoj8-";
@@ -426,7 +461,9 @@ function recordCard(g){
     <div class="tags"><span class="tag cat">${g.category}</span>
       ${isCheck?'<span class="tag">매일 체크</span>':`<span class="tag">${MODE_KR[g.target_mode]} ${g.target_value||''}${g.unit||''}</span>`}
     </div>
-    ${widget}</div>`;
+    ${widget}
+    <button class="tag" data-act="dates" data-id="${g.id}" style="margin-top:10px;background:#eef4ff;color:#4d96ff">📅 날짜별 기록 보기·수정</button>
+    </div>`;
 }
 
 // 목표 현황 탭
@@ -452,7 +489,9 @@ function statusCard(g){
       <span class="tag">${g.goal_type==='check'?'매일 체크':MODE_KR[g.target_mode]+' '+(g.target_value||'')+(g.unit||'')}</span></div>
     <div class="bar-row"><div class="bar"><i style="width:${a.pct}%;background:${pctColor(a.pct)}"></i></div>
       <span class="pct">${a.pct}%</span></div>
-    <div class="sub">${a.sub}</div></div>`;
+    <div class="sub">${a.sub}</div>
+    <button class="tag" data-act="dates" data-id="${g.id}" style="margin-top:10px;background:#eef4ff;color:#4d96ff">📅 날짜별 기록 보기·수정</button>
+    </div>`;
 }
 
 // 목표 결과 탭
@@ -498,6 +537,11 @@ document.body.addEventListener('click',async function(ev){
   }
   else if(act==='saveStep'){await saveStepValue(g);}
   else if(act==='edit'){openGoalSheet(g);}
+  else if(act==='dates'){openDateSheet(g);}
+  else if(act==='dplus'||act==='dminus'){
+    const date=t.dataset.date;await adjustDate(g,date,act==='dplus'?1:-1);
+  }
+  else if(act==='dcheck'){await toggleDate(g,t.dataset.date);}
   else if(act==='pickReco'){applyReco(id);}
 });
 
@@ -515,7 +559,92 @@ async function saveStepValue(g){
   if(ex)await sb.from('progress').update({value:val,done:val>0}).eq('id',ex.id);
   else await sb.from('progress').insert({goal_id:id,log_date:today,value:val,done:val>0});
   delete stepCache[id];
+  toast('저장되었습니다 ✓');
   await loadAll();
+}
+
+// ===== 토스트 안내 =====
+let toastTimer=null;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.style.opacity='1';el.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(-50%) translateY(20px)';},1600);
+}
+
+// ===== 날짜별 기록 시트 =====
+function datesOfGoalMonth(g){
+  // 보고 있는 달과 목표 기간이 겹치는 날짜들
+  const {start,end,last}=monthRange(state.ym);
+  const from=g.start_date>start?g.start_date:start;
+  const to=g.end_date<end?g.end_date:end;
+  const out=[];
+  let d=new Date(from);const dto=new Date(to);
+  while(d<=dto){out.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`);d.setDate(d.getDate()+1);}
+  return out;
+}
+function openDateSheet(g){
+  state.recGoal=g;
+  document.getElementById('dsTitle').innerHTML=`📅 ${g.title}`;
+  const isCheck=g.goal_type==='check';
+  document.getElementById('dsSub').textContent=isCheck
+    ?'날짜를 눌러 했어요/안했어요를 바꿔요'
+    :`날짜마다 −/＋로 숫자를 고쳐요 (단위: ${g.unit||'개'})`;
+  renderDateGrid(g);
+  show('dateSheet');
+}
+function renderDateGrid(g){
+  const isCheck=g.goal_type==='check';
+  const today=todayStr();
+  const dates=datesOfGoalMonth(g);
+  const grid=document.getElementById('dsGrid');
+  let h='<div class="dgrid">';
+  dates.forEach(ds=>{
+    const p=progOf(g.id).find(x=>x.log_date===ds);
+    const isToday=ds===today;const isFuture=ds>today;
+    const dd=ds.slice(5).replace('-','/');
+    if(isCheck){
+      const done=p&&p.done;
+      h+=`<div class="dcell check ${isToday?'today':''} ${isFuture?'future':''}">
+        <div class="dd">${dd}</div>
+        <div class="dcheck"><button class="${done?'on':''}" data-act="dcheck" data-id="${g.id}" data-date="${ds}">${done?'⭕':'·'}</button></div>
+      </div>`;
+    }else{
+      const v=p?(parseFloat(p.value)||0):0;
+      h+=`<div class="dcell ${isToday?'today':''} ${isFuture?'future':''}">
+        <div class="dd">${dd}</div>
+        <div class="dv ${v===0?'zero':''}">${v===0?'·':v}</div>
+        <div class="dctrl">
+          <button data-act="dminus" data-id="${g.id}" data-date="${ds}">−</button>
+          <button data-act="dplus" data-id="${g.id}" data-date="${ds}">＋</button>
+        </div>
+      </div>`;
+    }
+  });
+  h+='</div>';
+  grid.innerHTML=h;
+}
+async function adjustDate(g,ds,delta){
+  const p=PROGRESS.find(x=>x.goal_id===g.id&&x.log_date===ds);
+  const cur=p?(parseFloat(p.value)||0):0;
+  const nv=Math.max(0,cur+delta);
+  if(p)await sb.from('progress').update({value:nv,done:nv>0}).eq('id',p.id);
+  else await sb.from('progress').insert({goal_id:g.id,log_date:ds,value:nv,done:nv>0});
+  // PROGRESS 즉시 갱신 후 그리드만 다시 그림(시트 유지)
+  await reloadProgress();
+  renderDateGrid(GOALS.find(x=>x.id===g.id));
+}
+async function toggleDate(g,ds){
+  const p=PROGRESS.find(x=>x.goal_id===g.id&&x.log_date===ds);
+  if(p)await sb.from('progress').update({done:!p.done,value:p.done?0:1}).eq('id',p.id);
+  else await sb.from('progress').insert({goal_id:g.id,log_date:ds,done:true,value:1});
+  await reloadProgress();
+  renderDateGrid(GOALS.find(x=>x.id===g.id));
+}
+async function reloadProgress(){
+  const ids=GOALS.map(x=>x.id);
+  if(ids.length){const {data}=await sb.from('progress').select('*').in('goal_id',ids);PROGRESS=data||[];}
 }
 
 // ========== 목표 설정 (추천/신규) ==========
@@ -695,6 +824,8 @@ function hide(id){document.getElementById(id).classList.remove('show');}
 document.getElementById('fabSet').onclick=openSetSheet;
 document.getElementById('setClose').onclick=()=>hide('setSheet');
 document.getElementById('gClose').onclick=()=>hide('goalSheet');
+document.getElementById('dsClose').onclick=()=>hide('dateSheet');
+document.getElementById('rsClose').onclick=()=>hide('recSheet');
 document.getElementById('gSave').onclick=saveGoal;
 document.getElementById('gDelete').onclick=deleteGoal;
 document.getElementById('gTitle').addEventListener('input',onTitleInput);
