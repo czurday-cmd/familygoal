@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>우리 가족 목표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#fff9f0; --card:#ffffff; --ink:#4a4036; --muted:#9a8f7e; --line:#efe6d6;
+    --p1:#ff8a5b; --p2:#ffd166; --p3:#06d6a0; --p4:#4d96ff; --p5:#c77dff;
+    --dad:#4d96ff; --mom:#ff6fa5; --child:#06c270;
+    --sh:0 4px 16px rgba(150,120,80,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--ink);font-family:'Gowun Dodum',sans-serif}
+  body{padding-bottom:96px;line-height:1.5}
+  .jua{font-family:'Jua',sans-serif}
+
+  .wrap{max-width:680px;margin:0 auto;padding:16px 14px}
+
+  /* 헤더 */
+  .head{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 16px}
+  .logo{font-family:'Jua',sans-serif;font-size:1.5rem;color:var(--p1)}
+  .logo b{color:var(--p3)}
+  .mnav{display:flex;align-items:center;gap:6px;font-family:'Jua',sans-serif}
+  .mnav button{border:none;background:var(--card);width:34px;height:34px;border-radius:12px;
+    box-shadow:var(--sh);font-size:1.1rem;color:var(--ink)}
+  .mnav b{font-size:1rem;min-width:92px;text-align:center}
+
+  /* 멤버 필터 */
+  .members{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+  .mchip{display:flex;align-items:center;gap:6px;background:var(--card);border:2.5px solid transparent;
+    padding:7px 14px;border-radius:30px;box-shadow:var(--sh);font-size:.92rem;white-space:nowrap;flex-shrink:0}
+  .mchip .dot{width:12px;height:12px;border-radius:50%}
+  .mchip.on{border-color:var(--ink)}
+
+  /* 콘텐츠 */
+  .empty{text-align:center;color:var(--muted);padding:50px 16px}
+  .empty .big{font-size:3rem;display:block;margin-bottom:10px}
+  .loading{text-align:center;padding:60px;color:var(--muted);font-family:'Jua',sans-serif}
+
+  .person-group{margin-bottom:22px}
+  .person-head{display:flex;align-items:center;gap:8px;margin:0 2px 10px;font-family:'Jua',sans-serif;font-size:1.1rem}
+  .person-head .pdot{width:14px;height:14px;border-radius:50%}
+
+  /* 목표 카드 */
+  .card{background:var(--card);border-radius:18px;padding:15px;box-shadow:var(--sh);margin-bottom:11px;
+    border-left:6px solid var(--line)}
+  .card .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .card .ttl{font-size:1.08rem;font-weight:bold;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+  .tag{font-size:.72rem;padding:3px 9px;border-radius:20px;background:#f5efe2;color:var(--muted)}
+  .tag.cat{background:#eef6f0;color:#4a8c6a}
+  .streak{font-size:.78rem;color:var(--p1);font-weight:bold}
+
+  .bar-row{display:flex;align-items:center;gap:10px;margin-top:12px}
+  .bar{flex:1;height:12px;background:#f1ebde;border-radius:20px;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:20px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .pct{font-family:'Jua',sans-serif;font-size:.95rem;min-width:44px;text-align:right}
+  .sub{font-size:.8rem;color:var(--muted);margin-top:5px}
+
+  /* 기록 입력 위젯 (기록하기 탭) */
+  .rec{display:flex;align-items:center;gap:10px;margin-top:13px}
+  .rec.check{justify-content:stretch}
+  .bigbtn{flex:1;border:none;border-radius:14px;padding:15px;font-family:'Jua',sans-serif;font-size:1.05rem;
+    background:#f4eee2;color:var(--ink);transition:transform .1s}
+  .bigbtn:active{transform:scale(.97)}
+  .bigbtn.on{background:var(--p3);color:#fff}
+  .bigbtn.add{background:var(--p1);color:#fff}
+  .stepper{display:flex;align-items:center;gap:8px;flex:1}
+  .stepper button{width:46px;height:46px;border:none;border-radius:13px;background:#f4eee2;
+    font-size:1.5rem;font-family:'Jua',sans-serif;color:var(--ink)}
+  .stepper button:active{transform:scale(.94)}
+  .stepper .num{flex:1;text-align:center;font-family:'Jua',sans-serif;font-size:1.3rem}
+  .stepper .num small{font-size:.85rem;color:var(--muted)}
+  .savechip{border:none;border-radius:13px;padding:0 16px;height:46px;background:var(--p4);color:#fff;
+    font-family:'Jua',sans-serif;font-size:.95rem}
+
+  .done-stamp{display:inline-flex;align-items:center;gap:5px;color:var(--p3);font-family:'Jua',sans-serif;
+    font-size:.95rem;margin-top:10px}
+
+  /* 하단 탭바 */
+  .tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);box-shadow:0 -4px 20px rgba(150,120,80,.12);
+    display:flex;justify-content:space-around;padding:8px 8px 14px;z-index:30}
+  .tabbar button{border:none;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-family:'Jua',sans-serif;font-size:.78rem;color:var(--muted);padding:4px 12px;border-radius:12px}
+  .tabbar button .ic{font-size:1.5rem}
+  .tabbar button.on{color:var(--p1)}
+
+  /* 목표 설정 버튼 (플로팅) */
+  .fab{position:fixed;right:max(16px,calc(50vw - 340px + 16px));bottom:88px;z-index:31;
+    border:none;border-radius:30px;padding:14px 22px;background:var(--p1);color:#fff;
+    font-family:'Jua',sans-serif;font-size:1rem;box-shadow:0 6px 20px rgba(255,138,91,.5)}
+  .fab:active{transform:scale(.96)}
+
+  /* 모달 (화면 중앙, 단순) */
+  .sheet{position:fixed;inset:0;background:rgba(74,64,54,.5);z-index:50;display:none;
+    align-items:center;justify-content:center;padding:18px;overflow-y:auto}
+  .sheet.show{display:flex}
+  .box{background:var(--bg);width:100%;max-width:480px;margin:auto;border-radius:24px;padding:22px 18px 24px;
+    animation:pop .22s ease}
+  @keyframes pop{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .box h2{font-family:'Jua',sans-serif;font-size:1.3rem;color:var(--p1);margin-bottom:16px}
+  .box h2 .em{font-size:1.5rem}
+
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px;font-weight:bold}
+  .field input,.field select{width:100%;border:2px solid var(--line);border-radius:13px;padding:12px;
+    font-family:inherit;font-size:1rem;background:var(--card);color:var(--ink)}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--p1)}
+  .row2{display:flex;gap:10px}.row2>*{flex:1}
+
+  .seg{display:flex;gap:7px;flex-wrap:wrap}
+  .seg button{border:2px solid var(--line);background:var(--card);border-radius:13px;padding:11px 8px;
+    font-family:'Jua',sans-serif;font-size:.9rem;color:var(--muted);flex:1;min-width:64px}
+  .seg button.on{background:var(--p1);color:#fff;border-color:var(--p1)}
+
+  .catgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .catgrid button{border:2px solid var(--line);background:var(--card);border-radius:14px;padding:12px 4px;
+    font-family:'Jua',sans-serif;font-size:.88rem;color:var(--ink);display:flex;flex-direction:column;gap:4px;align-items:center}
+  .catgrid button .em{font-size:1.4rem}
+  .catgrid button.on{background:#fff2e8;border-color:var(--p1);color:var(--p1)}
+
+  .primary{width:100%;padding:15px;background:var(--p1);color:#fff;border:none;border-radius:15px;
+    font-family:'Jua',sans-serif;font-size:1.1rem;margin-top:6px}
+  .primary:active{transform:scale(.98)}
+  .ghost{width:100%;padding:12px;background:transparent;color:var(--muted);border:none;
+    font-family:'Jua',sans-serif;font-size:.95rem;margin-top:6px}
+  .danger{color:#d9534f}
+
+  /* 자동완성 */
+  .ac{position:relative}
+  .aclist{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--card);
+    border:2px solid var(--line);border-radius:13px;box-shadow:var(--sh);z-index:5;max-height:180px;overflow-y:auto;display:none}
+  .aclist.show{display:block}
+  .aclist div{padding:11px 13px;font-size:.95rem;border-bottom:1px solid var(--line)}
+  .aclist div:last-child{border-bottom:none}
+  .aclist div:active{background:#fff2e8}
+  .aclist .meta{font-size:.78rem;color:var(--muted)}
+
+  /* 추천 카드 */
+  .reco{background:var(--card);border-radius:16px;padding:14px;box-shadow:var(--sh);margin-bottom:10px;
+    border-left:6px solid var(--p2)}
+  .reco .rttl{font-family:'Jua',sans-serif;font-size:1.02rem;display:flex;align-items:center;gap:6px}
+  .reco .why{font-size:.82rem;color:var(--muted);margin:6px 0 10px}
+  .reco .arrow{color:var(--p1);font-weight:bold}
+  .reco .pick{width:100%;border:none;border-radius:12px;padding:11px;background:var(--p3);color:#fff;
+    font-family:'Jua',sans-serif;font-size:.95rem}
+
+  .seg-tab{display:flex;gap:8px;margin-bottom:16px}
+  .seg-tab button{flex:1;border:2px solid var(--line);background:var(--card);border-radius:14px;padding:12px;
+    font-family:'Jua',sans-serif;font-size:1rem;color:var(--muted)}
+  .seg-tab button.on{background:var(--p1);color:#fff;border-color:var(--p1)}
+
+  .hint{font-size:.78rem;color:var(--muted);margin-top:5px}
+  .result-badge{display:inline-flex;align-items:center;gap:5px;background:#eef6f0;color:#3f8c63;
+    font-family:'Jua',sans-serif;font-size:.85rem;padding:4px 12px;border-radius:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="logo">우리가족 <b>목표</b></div>
+    <div class="mnav">
+      <button id="prevM">‹</button>
+      <b id="curM">2026년 6월</b>
+      <button id="nextM">›</button>
+    </div>
+  </div>
+
+  <div class="members" id="members"></div>
+  <div id="view"><div class="loading">불러오는 중…</div></div>
+</div>
+
+<button class="fab" id="fabSet">🎯 목표 설정</button>
+
+<div class="tabbar">
+  <button data-tab="record" class="on"><span class="ic">✏️</span>기록하기</button>
+  <button data-tab="status"><span class="ic">📊</span>목표 현황</button>
+  <button data-tab="result"><span class="ic">🏆</span>목표 결과</button>
+</div>
+
+<!-- 목표 설정 시트 -->
+<div class="sheet" id="setSheet">
+  <div class="box">
+    <h2><span class="em">🎯</span> 목표 설정</h2>
+    <div class="seg-tab" id="setMode">
+      <button data-m="reco" class="on">⭐ 추천</button>
+      <button data-m="new">➕ 신규</button>
+    </div>
+    <div id="setBody"></div>
+    <button class="ghost" id="setClose">닫기</button>
+  </div>
+</div>
+
+<!-- 신규/편집 목표 입력 시트 -->
+<div class="sheet" id="goalSheet">
+  <div class="box">
+    <h2 id="gsTitle"><span class="em">➕</span> 새 목표</h2>
+    <div class="field">
+      <label>누구의 목표인가요?</label>
+      <select id="gMember"></select>
+    </div>
+    <div class="field ac">
+      <label>목표 이름</label>
+      <input id="gTitle" placeholder="예: 수학 문제집, 달리기" autocomplete="off" />
+      <div class="aclist" id="acList"></div>
+      <div class="hint">예전에 한 목표를 누르면 그대로 불러와요 ✨</div>
+    </div>
+    <div class="field">
+      <label>어떤 종류예요?</label>
+      <div class="catgrid" id="gCat">
+        <button data-v="학업"><span class="em">📚</span>학업</button>
+        <button data-v="가사"><span class="em">🧹</span>가사</button>
+        <button data-v="업무"><span class="em">💼</span>업무</button>
+        <button data-v="운동"><span class="em">💪</span>운동</button>
+        <button data-v="습관"><span class="em">🌱</span>습관</button>
+        <button data-v="기타"><span class="em">✨</span>기타</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>기록 방법</label>
+      <div class="seg" id="gType">
+        <button data-v="check" class="on">했어요/안했어요</button>
+        <button data-v="number">숫자로 기록</button>
+      </div>
+    </div>
+    <div id="numOpts">
+      <div class="field">
+        <label>달성 기준</label>
+        <div class="seg" id="gMode">
+          <button data-v="daily" class="on">매일</button>
+          <button data-v="weekly">매주</button>
+          <button data-v="monthly_total">한 달 누계</button>
+        </div>
+        <div class="hint" id="modeHint">매일 목표량을 채우는 걸로 쳐요 (예: 매일 4장)</div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>목표값</label><input id="gTarget" type="number" inputmode="numeric" placeholder="4" /></div>
+        <div class="field"><label>단위</label><input id="gUnit" placeholder="장 / km / 번" /></div>
+      </div>
+    </div>
+    <button class="primary" id="gSave">저장하기</button>
+    <button class="ghost danger" id="gDelete" style="display:none">목표 삭제</button>
+    <button class="ghost" id="gClose">닫기</button>
+  </div>
+</div>
+
+<!-- 숫자 기록 입력 시트 -->
+<div class="sheet" id="recSheet">
+  <div class="box">
+    <h2 id="rsTitle">오늘 기록</h2>
+    <div class="field">
+      <label id="rsLabel">오늘 한 만큼</label>
+      <input id="rsValue" type="number" inputmode="numeric" placeholder="숫자 입력" />
+    </div>
+    <button class="primary" id="rsSave">기록하기</button>
+    <button class="ghost" id="rsClose">닫기</button>
+  </div>
+</div>
+
+<script>
+const SB_URL="https://fucwiszvnxdntxfzupwf.supabase.co";
+const SB_KEY="sb_publishable_ng1aIdmRqA8zZ2PjQnyYmQ_Djiaoj8-";
+const sb=supabase.createClient(SB_URL,SB_KEY);
+
+const RC={dad:'var(--dad)',mom:'var(--mom)',child:'var(--child)'};
+const CAT_EM={학업:'📚',가사:'🧹',업무:'💼',운동:'💪',습관:'🌱',기타:'✨'};
+const MODE_KR={daily:'매일',weekly:'매주',monthly_total:'누계'};
+
+let MEMBERS=[],GOALS=[],PROGRESS=[];
+const state={tab:'record',member:'all',ym:ymNow(),
+  gType:'check',gMode:'daily',gCat:'학업',editId:null,recGoal:null,setMode:'reco'};
+
+function ymNow(){const d=new Date();return {y:d.getFullYear(),m:d.getMonth()+1};}
+function pad(n){return String(n).padStart(2,'0');}
+function ymLabel(ym){return `${ym.y}년 ${ym.m}월`;}
+function monthRange(ym){const last=new Date(ym.y,ym.m,0).getDate();
+  return {start:`${ym.y}-${pad(ym.m)}-01`,end:`${ym.y}-${pad(ym.m)}-${pad(last)}`,last};}
+function todayStr(){const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function prevYm(ym){let y=ym.y,m=ym.m-1;if(m<1){m=12;y--;}return {y,m};}
+
+async function loadAll(){
+  try{
+    const {data:m}=await sb.from('members').select('*').order('created_at');
+    MEMBERS=m||[];
+    const {data:g}=await sb.from('goals').select('*').order('created_at',{ascending:false});
+    GOALS=g||[];
+    const ids=GOALS.map(x=>x.id);
+    if(ids.length){
+      const {data:p}=await sb.from('progress').select('*').in('goal_id',ids);
+      PROGRESS=p||[];
+    }else PROGRESS=[];
+    renderMembers();render();
+  }catch(e){
+    document.getElementById('view').innerHTML='<div class="empty"><span class="big">😢</span>데이터를 불러오지 못했어요<br><span style="font-size:.85rem">인터넷 연결을 확인하고 새로고침 해주세요</span></div>';
+  }
+}
+
+function memberOf(id){return MEMBERS.find(m=>m.id===id);}
+function progOf(gid){return PROGRESS.filter(p=>p.goal_id===gid);}
+
+// 보고 있는 달과 겹치는 목표
+function goalsInMonth(ym){
+  const {start,end}=monthRange(ym);
+  return GOALS.filter(g=>{
+    if(state.member!=='all'&&g.member_id!==state.member)return false;
+    return g.start_date<=end&&g.end_date>=start;
+  });
+}
+
+function weekKey(ds){const d=new Date(ds);const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function elapsedDays(start,end){const t=todayStr();
+  if(t<start)return 1;
+  if(t>end)return (new Date(end)-new Date(start))/86400000+1;
+  return (new Date(t)-new Date(start))/86400000+1;}
+
+// 달성률 계산 (보고 있는 달 기준)
+function achievement(g,ym){
+  const {start,end,last}=monthRange(ym);
+  const ps=progOf(g.id).filter(p=>p.log_date>=start&&p.log_date<=end);
+  const tgt=parseFloat(g.target_value)||0;
+  const mode=g.target_mode||'daily';
+  if(g.goal_type==='check'){
+    const dc=ps.filter(p=>p.done).length;
+    return {pct:Math.min(100,Math.round(dc/last*100)),sub:`${dc}일 했어요 (${last}일 중)`,doneToday:isDoneToday(g)};
+  }
+  if(mode==='monthly_total'){
+    const sum=ps.reduce((a,p)=>a+(parseFloat(p.value)||0),0);
+    return {pct:tgt?Math.min(100,Math.round(sum/tgt*100)):0,sum,sub:`${+sum.toFixed(1)} / ${tgt}${g.unit||''}`};
+  }
+  if(mode==='weekly'){
+    const bw={};ps.forEach(p=>{const k=weekKey(p.log_date);bw[k]=(bw[k]||0)+(parseFloat(p.value)||0);});
+    const weeks=Math.ceil(last/7);const ok=Object.values(bw).filter(v=>v>=tgt).length;
+    const thisW=bw[weekKey(todayStr())]||0;
+    return {pct:Math.min(100,Math.round(ok/weeks*100)),sub:`이번주 ${+thisW.toFixed(1)}/${tgt}${g.unit||''} · ${ok}/${weeks}주`};
+  }
+  // daily 수치형: 누계 ÷ (목표×경과일)
+  const sum=ps.reduce((a,p)=>a+(parseFloat(p.value)||0),0);
+  const el=elapsedDays(start,end);const denom=tgt*el;
+  const todayP=ps.find(p=>p.log_date===todayStr());
+  const ts=todayP?(parseFloat(todayP.value)||0):0;
+  return {pct:denom?Math.min(100,Math.round(sum/denom*100)):0,sum,todaySum:ts,
+    sub:`오늘 ${+ts.toFixed(1)}/${tgt}${g.unit||''} · 누계 ${+sum.toFixed(1)}`};
+}
+function isDoneToday(g){return progOf(g.id).some(p=>p.log_date===todayStr()&&p.done);}
+function todayValue(g){const p=progOf(g.id).find(x=>x.log_date===todayStr());return p?(parseFloat(p.value)||0):0;}
+
+function streak(g){
+  let set;
+  if(g.goal_type==='check')set=new Set(progOf(g.id).filter(p=>p.done).map(p=>p.log_date));
+  else if((g.target_mode||'daily')==='daily'){const tgt=parseFloat(g.target_value)||0;
+    set=new Set(progOf(g.id).filter(p=>(parseFloat(p.value)||0)>=tgt).map(p=>p.log_date));}
+  else return 0;
+  let s=0,d=new Date();
+  for(;;){const ds=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    if(set.has(ds)){s++;d.setDate(d.getDate()-1);}
+    else{if(ds===todayStr()){d.setDate(d.getDate()-1);continue;}break;}}
+  return s;
+}
+
+function pctColor(pct){if(pct>=100)return 'var(--p3)';if(pct>=60)return 'var(--p2)';return 'var(--p1)';}
+
+// ========== 렌더링 ==========
+function renderMembers(){
+  const el=document.getElementById('members');
+  let h=`<div class="mchip ${state.member==='all'?'on':''}" data-mid="all">
+    <span class="dot" style="background:linear-gradient(45deg,var(--dad),var(--mom),var(--child))"></span>전체</div>`;
+  MEMBERS.forEach(m=>{h+=`<div class="mchip ${state.member===m.id?'on':''}" data-mid="${m.id}">
+    <span class="dot" style="background:${RC[m.role]||'#ccc'}"></span>${m.name}</div>`;});
+  el.innerHTML=h;
+}
+
+function render(){
+  document.getElementById('curM').textContent=ymLabel(state.ym);
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===state.tab));
+  const v=document.getElementById('view');
+  if(state.tab==='record')v.innerHTML=renderRecord();
+  else if(state.tab==='status')v.innerHTML=renderStatus();
+  else v.innerHTML=renderResult();
+}
+
+function groupByMember(goals){
+  const map={};goals.forEach(g=>{(map[g.member_id]=map[g.member_id]||[]).push(g);});
+  return MEMBERS.filter(m=>map[m.id]).map(m=>({m,goals:map[m.id]}));
+}
+
+// 기록하기 탭
+function renderRecord(){
+  const list=goalsInMonth(state.ym).filter(g=>g.start_date<=todayStr()&&g.end_date>=todayStr());
+  if(!list.length)return emptyBox('🌱','오늘 기록할 목표가 없어요','목표 설정에서 새 목표를 만들어요');
+  let h='';
+  groupByMember(list).forEach(({m,goals})=>{
+    h+=`<div class="person-group"><div class="person-head"><span class="pdot" style="background:${RC[m.role]}"></span>${m.name}</div>`;
+    goals.forEach(g=>h+=recordCard(g));
+    h+=`</div>`;
+  });
+  return h;
+}
+function recordCard(g){
+  const isCheck=g.goal_type==='check';
+  const done=isDoneToday(g);
+  const tv=todayValue(g);
+  let widget;
+  if(isCheck){
+    widget=`<div class="rec check"><button class="bigbtn ${done?'on':''}" data-act="check" data-id="${g.id}">
+      ${done?'✅ 오늘 했어요!':'오늘 했어요'}</button></div>`;
+  }else{
+    widget=`<div class="rec">
+      <div class="stepper">
+        <button data-act="minus" data-id="${g.id}">−</button>
+        <div class="num"><span id="rv-${g.id}">${tv}</span><small> ${g.unit||''}</small></div>
+        <button data-act="plus" data-id="${g.id}">＋</button>
+      </div>
+      <button class="savechip" data-act="saveStep" data-id="${g.id}">저장</button>
+    </div>`;
+  }
+  return `<div class="card" style="border-left-color:${RC[memberOf(g.member_id)?.role]}">
+    <div class="top"><div class="ttl">${CAT_EM[g.category]||''} ${g.title}</div>
+      <button class="tag" data-act="edit" data-id="${g.id}">✎</button></div>
+    <div class="tags"><span class="tag cat">${g.category}</span>
+      ${isCheck?'<span class="tag">매일 체크</span>':`<span class="tag">${MODE_KR[g.target_mode]} ${g.target_value||''}${g.unit||''}</span>`}
+    </div>
+    ${widget}</div>`;
+}
+
+// 목표 현황 탭
+function renderStatus(){
+  const list=goalsInMonth(state.ym).filter(g=>achievement(g,state.ym).pct<100);
+  if(!list.length)return emptyBox('📊','진행 중인 목표가 없어요','모두 달성했거나 아직 목표가 없어요');
+  let h='';
+  groupByMember(list).forEach(({m,goals})=>{
+    h+=`<div class="person-group"><div class="person-head"><span class="pdot" style="background:${RC[m.role]}"></span>${m.name}</div>`;
+    goals.forEach(g=>h+=statusCard(g));
+    h+=`</div>`;
+  });
+  return h;
+}
+function statusCard(g){
+  const a=achievement(g,state.ym);const st=streak(g);
+  const col=RC[memberOf(g.member_id)?.role];
+  return `<div class="card" style="border-left-color:${col}">
+    <div class="top"><div class="ttl">${CAT_EM[g.category]||''} ${g.title}
+      ${st>1?`<span class="streak">🔥${st}일</span>`:''}</div>
+      <button class="tag" data-act="edit" data-id="${g.id}">✎</button></div>
+    <div class="tags"><span class="tag cat">${g.category}</span>
+      <span class="tag">${g.goal_type==='check'?'매일 체크':MODE_KR[g.target_mode]+' '+(g.target_value||'')+(g.unit||'')}</span></div>
+    <div class="bar-row"><div class="bar"><i style="width:${a.pct}%;background:${pctColor(a.pct)}"></i></div>
+      <span class="pct">${a.pct}%</span></div>
+    <div class="sub">${a.sub}</div></div>`;
+}
+
+// 목표 결과 탭
+function renderResult(){
+  const list=goalsInMonth(state.ym).filter(g=>achievement(g,state.ym).pct>=100);
+  if(!list.length)return emptyBox('🏆','아직 달성한 목표가 없어요','조금만 더 힘내요!');
+  let h=`<div style="text-align:center;margin-bottom:16px" class="jua">🎉 이만큼 해냈어요!</div>`;
+  groupByMember(list).forEach(({m,goals})=>{
+    h+=`<div class="person-group"><div class="person-head"><span class="pdot" style="background:${RC[m.role]}"></span>${m.name} <span style="color:var(--muted);font-size:.85rem">${goals.length}개 달성</span></div>`;
+    goals.forEach(g=>{const a=achievement(g,state.ym);
+      h+=`<div class="card" style="border-left-color:var(--p3)">
+        <div class="top"><div class="ttl">${CAT_EM[g.category]||''} ${g.title}</div>
+          <span class="result-badge">✅ 달성</span></div>
+        <div class="sub">${a.sub}</div></div>`;});
+    h+=`</div>`;
+  });
+  return h;
+}
+
+function emptyBox(em,t,s){return `<div class="empty"><span class="big">${em}</span>${t}<br><span style="font-size:.85rem">${s}</span></div>`;}
+
+// ========== 이벤트: body에 위임 한 번만 ==========
+const stepCache={}; // 기록하기 stepper 임시값
+document.body.addEventListener('click',async function(ev){
+  const t=ev.target.closest('[data-act],[data-mid],[data-tab],[data-m]');
+  if(!t)return;
+  // 멤버 필터
+  if(t.dataset.mid){state.member=t.dataset.mid;renderMembers();render();return;}
+  // 하단 탭
+  if(t.dataset.tab){state.tab=t.dataset.tab;render();return;}
+  // 설정 추천/신규 토글
+  if(t.dataset.m){state.setMode=t.dataset.m;renderSetBody();
+    document.querySelectorAll('#setMode button').forEach(b=>b.classList.toggle('on',b.dataset.m===t.dataset.m));return;}
+  // 카드 액션
+  const act=t.dataset.act,id=t.dataset.id;
+  if(!act)return;
+  const g=GOALS.find(x=>x.id===id);
+  if(act==='check'){await toggleCheck(g);}
+  else if(act==='plus'||act==='minus'){
+    const cur=(stepCache[id]!==undefined)?stepCache[id]:todayValue(g);
+    const nv=Math.max(0,cur+(act==='plus'?1:-1));
+    stepCache[id]=nv;document.getElementById('rv-'+id).textContent=nv;
+  }
+  else if(act==='saveStep'){await saveStepValue(g);}
+  else if(act==='edit'){openGoalSheet(g);}
+  else if(act==='pickReco'){applyReco(id);}
+});
+
+async function toggleCheck(g){
+  const today=todayStr();
+  const ex=PROGRESS.find(p=>p.goal_id===g.id&&p.log_date===today);
+  if(ex)await sb.from('progress').update({done:!ex.done}).eq('id',ex.id);
+  else await sb.from('progress').insert({goal_id:g.id,log_date:today,done:true,value:1});
+  await loadAll();
+}
+async function saveStepValue(g){
+  const id=g.id;const val=(stepCache[id]!==undefined)?stepCache[id]:todayValue(g);
+  const today=todayStr();
+  const ex=PROGRESS.find(p=>p.goal_id===id&&p.log_date===today);
+  if(ex)await sb.from('progress').update({value:val,done:val>0}).eq('id',ex.id);
+  else await sb.from('progress').insert({goal_id:id,log_date:today,value:val,done:val>0});
+  delete stepCache[id];
+  await loadAll();
+}
+
+// ========== 목표 설정 (추천/신규) ==========
+function openSetSheet(){state.setMode='reco';
+  document.querySelectorAll('#setMode button').forEach(b=>b.classList.toggle('on',b.dataset.m==='reco'));
+  renderSetBody();show('setSheet');}
+
+function renderSetBody(){
+  const body=document.getElementById('setBody');
+  if(state.setMode==='new'){
+    body.innerHTML=`<p style="color:var(--muted);font-size:.9rem;text-align:center;padding:10px 0">아래 버튼으로 새 목표를 만들어요</p>
+      <button class="primary" id="openNew">➕ 새 목표 만들기</button>`;
+    document.getElementById('openNew').onclick=()=>{hide('setSheet');openGoalSheet(null);};
+    return;
+  }
+  // 추천: 지난달 목표들의 달성률 기반
+  const prev=prevYm(state.ym);
+  const prevGoals=GOALS.filter(g=>{
+    if(state.member!=='all'&&g.member_id!==state.member)return false;
+    const {start,end}=monthRange(prev);
+    return g.start_date<=end&&g.end_date>=start;
+  });
+  if(!prevGoals.length){
+    body.innerHTML=`<div class="empty" style="padding:30px 10px"><span class="big">⭐</span>
+      지난달 기록이 없어서<br>추천할 게 아직 없어요<br>
+      <span style="font-size:.85rem">신규 탭에서 목표를 만들어보세요</span></div>`;
+    return;
+  }
+  let h='';
+  prevGoals.forEach(g=>{
+    const a=achievement(g,prev);
+    const m=memberOf(g.member_id);
+    const sugg=suggestTarget(g,a.pct);
+    h+=`<div class="reco">
+      <div class="rttl">${CAT_EM[g.category]||''} ${g.title}
+        <span class="tag" style="background:${RC[m?.role]};color:#fff">${m?.name||''}</span></div>
+      <div class="why">지난달 ${a.pct}% 달성 → ${sugg.why}</div>
+      ${sugg.targetText?`<div class="why"><b>이번달 제안:</b> <span class="arrow">${sugg.targetText}</span></div>`:''}
+      <button class="pick" data-act="pickReco" data-id="${g.id}|${sugg.target||''}">이 목표로 시작하기</button>
+    </div>`;
+  });
+  body.innerHTML=h;
+}
+
+// 추천 목표값 계산
+function suggestTarget(g,pct){
+  if(g.goal_type==='check')return {target:null,targetText:'',why:'매일 체크 목표는 그대로 이어가요'};
+  const cur=parseFloat(g.target_value)||0;
+  let nt=cur,why='';
+  if(pct<80){nt=cur;why='조금 버거웠으니 같은 목표로 다시 도전!';}
+  else if(pct<90){nt=Math.round(cur*1.1*10)/10;why='잘했어요! 살짝 올려볼까요';}
+  else{nt=Math.round(cur*1.2*10)/10;why='훌륭해요! 좀 더 높여봐요 💪';}
+  return {target:nt,targetText:`${cur}${g.unit||''} → ${nt}${g.unit||''}`,why};
+}
+
+async function applyReco(payload){
+  const [gid,targetStr]=payload.split('|');
+  const old=GOALS.find(x=>x.id===gid);if(!old)return;
+  const {start,end}=monthRange(state.ym);
+  const target=targetStr?parseFloat(targetStr):old.target_value;
+  // 이번달에 같은 목표가 이미 있으면 막기
+  const dup=GOALS.find(g=>g.member_id===old.member_id&&g.title===old.title&&g.start_date<=end&&g.end_date>=start);
+  if(dup){alert('이번 달에 이미 같은 목표가 있어요');return;}
+  await sb.from('goals').insert({
+    member_id:old.member_id,title:old.title,category:old.category,
+    goal_type:old.goal_type,target_mode:old.target_mode,period:old.period||'daily',
+    target_value:target,unit:old.unit,start_date:start,end_date:end,priority:false
+  });
+  hide('setSheet');await loadAll();
+  state.tab='status';render();
+}
+
+// ========== 신규/편집 목표 시트 ==========
+function fillMembers(){document.getElementById('gMember').innerHTML=
+  MEMBERS.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');}
+
+function setType(t){state.gType=t;
+  document.querySelectorAll('#gType button').forEach(b=>b.classList.toggle('on',b.dataset.v===t));
+  document.getElementById('numOpts').style.display=t==='number'?'block':'none';}
+function setMode(m){state.gMode=m;
+  document.querySelectorAll('#gMode button').forEach(b=>b.classList.toggle('on',b.dataset.v===m));
+  const hints={daily:'매일 목표량을 채우는 걸로 쳐요 (예: 매일 4장)',
+    weekly:'한 주에 목표량을 채우면 돼요 (예: 매주 3권)',
+    monthly_total:'한 달 동안 다 모으면 달성 (예: 월 40km)'};
+  document.getElementById('modeHint').textContent=hints[m];}
+function setCat(c){state.gCat=c;
+  document.querySelectorAll('#gCat button').forEach(b=>b.classList.toggle('on',b.dataset.v===c));}
+
+function openGoalSheet(g){
+  fillMembers();
+  const {start,end}=monthRange(state.ym);
+  if(g){
+    state.editId=g.id;
+    document.getElementById('gsTitle').innerHTML='<span class="em">✎</span> 목표 수정';
+    document.getElementById('gDelete').style.display='block';
+    document.getElementById('gMember').value=g.member_id;
+    document.getElementById('gTitle').value=g.title;
+    setCat(g.category);setType(g.goal_type);setMode(g.target_mode||'daily');
+    document.getElementById('gTarget').value=g.target_value||'';
+    document.getElementById('gUnit').value=g.unit||'';
+  }else{
+    state.editId=null;
+    document.getElementById('gsTitle').innerHTML='<span class="em">➕</span> 새 목표';
+    document.getElementById('gDelete').style.display='none';
+    document.getElementById('gTitle').value='';
+    document.getElementById('gTarget').value='';
+    document.getElementById('gUnit').value='';
+    setCat('학업');setType('check');setMode('daily');
+    if(state.member!=='all')document.getElementById('gMember').value=state.member;
+  }
+  hideAcList();show('goalSheet');
+}
+
+async function saveGoal(){
+  const title=document.getElementById('gTitle').value.trim();
+  if(!title){alert('목표 이름을 적어주세요');return;}
+  const isNum=state.gType==='number';
+  if(isNum&&!(parseFloat(document.getElementById('gTarget').value)>0)){alert('목표값을 적어주세요');return;}
+  const {start,end}=monthRange(state.ym);
+  const periodMap={daily:'daily',weekly:'weekly',monthly_total:'monthly'};
+  const payload={
+    member_id:document.getElementById('gMember').value,title,category:state.gCat,
+    goal_type:state.gType,target_mode:isNum?state.gMode:'daily',period:periodMap[isNum?state.gMode:'daily'],
+    target_value:isNum?parseFloat(document.getElementById('gTarget').value):null,
+    unit:isNum?(document.getElementById('gUnit').value.trim()||null):null,
+    start_date:start,end_date:end,priority:false
+  };
+  if(state.editId)await sb.from('goals').update(payload).eq('id',state.editId);
+  else await sb.from('goals').insert(payload);
+  hide('goalSheet');await loadAll();
+}
+async function deleteGoal(){
+  if(!confirm('이 목표와 기록을 모두 지울까요?'))return;
+  await sb.from('goals').delete().eq('id',state.editId);
+  hide('goalSheet');await loadAll();
+}
+
+// ========== 자동완성 (과거 목표 재사용) ==========
+function uniquePastGoals(){
+  const seen={},out=[];
+  GOALS.forEach(g=>{const key=g.member_id+'|'+g.title;
+    if(!seen[key]){seen[key]=1;out.push(g);}});
+  return out;
+}
+function onTitleInput(){
+  const q=document.getElementById('gTitle').value.trim();
+  const list=document.getElementById('acList');
+  if(!q){hideAcList();return;}
+  const mid=document.getElementById('gMember').value;
+  const matches=uniquePastGoals().filter(g=>g.title.includes(q)&&g.member_id===mid).slice(0,6);
+  if(!matches.length){hideAcList();return;}
+  list.innerHTML=matches.map(g=>`<div data-fill='${g.id}'>${CAT_EM[g.category]||''} ${g.title}
+    <span class="meta">· ${g.category} ${g.goal_type==='number'?'· '+MODE_KR[g.target_mode]+' '+(g.target_value||'')+(g.unit||''):'· 매일 체크'}</span></div>`).join('');
+  list.classList.add('show');
+  list.querySelectorAll('[data-fill]').forEach(d=>d.onclick=()=>fillFromPast(d.dataset.fill));
+}
+function fillFromPast(gid){
+  const g=GOALS.find(x=>x.id===gid);if(!g)return;
+  document.getElementById('gTitle').value=g.title;
+  setCat(g.category);setType(g.goal_type);setMode(g.target_mode||'daily');
+  document.getElementById('gTarget').value=g.target_value||'';
+  document.getElementById('gUnit').value=g.unit||'';
+  hideAcList();
+}
+function hideAcList(){document.getElementById('acList').classList.remove('show');}
+
+// ========== 시트 열고닫기 ==========
+function show(id){
+  document.querySelectorAll('.sheet.show').forEach(s=>s.classList.remove('show'));
+  const el=document.getElementById(id);el.classList.add('show');el.scrollTop=0;
+}
+function hide(id){document.getElementById(id).classList.remove('show');}
+
+// 숫자 기록 시트(현황 탭 등에서 직접 입력하고 싶을 때 - 현재는 stepper로 대체)
+
+// ========== 바인딩 ==========
+document.getElementById('fabSet').onclick=openSetSheet;
+document.getElementById('setClose').onclick=()=>hide('setSheet');
+document.getElementById('gClose').onclick=()=>hide('goalSheet');
+document.getElementById('gSave').onclick=saveGoal;
+document.getElementById('gDelete').onclick=deleteGoal;
+document.getElementById('gTitle').addEventListener('input',onTitleInput);
+document.getElementById('gMember').addEventListener('change',onTitleInput);
+document.querySelectorAll('#gType button').forEach(b=>b.onclick=()=>setType(b.dataset.v));
+document.querySelectorAll('#gMode button').forEach(b=>b.onclick=()=>setMode(b.dataset.v));
+document.querySelectorAll('#gCat button').forEach(b=>b.onclick=()=>setCat(b.dataset.v));
+document.getElementById('prevM').onclick=()=>{state.ym=prevYm(state.ym);render();};
+document.getElementById('nextM').onclick=()=>{let y=state.ym.y,m=state.ym.m+1;if(m>12){m=1;y++;}state.ym={y,m};render();};
+// 시트 바깥 탭하면 닫기
+document.querySelectorAll('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s)s.classList.remove('show');}));
+
+loadAll();
+</script>
+</body>
+</html>
